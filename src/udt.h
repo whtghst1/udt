@@ -81,10 +81,14 @@ written by
          typedef __int64 uint64_t;
       #endif
 
-      #ifdef UDT_EXPORTS
-         #define UDT_API __declspec(dllexport)
+      #ifdef UDT_STATIC
+         #define UDT_API
       #else
-         #define UDT_API __declspec(dllimport)
+         #ifdef UDT_EXPORTS
+             #define UDT_API __declspec(dllexport)
+         #else
+             #define UDT_API __declspec(dllimport)
+         #endif
       #endif
    #else
       #define UDT_API
