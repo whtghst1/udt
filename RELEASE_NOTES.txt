@@ -1,3 +1,9 @@
+version 4.12
+converted to Visual Studio 2017.
+added Static libary build configurations.
+fixed use after free bug during connect.
+fixed read before initialze bug with CUDT.
+
 version 4.11
 
 mostly bug fixes since last version.
