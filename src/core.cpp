@@ -669,6 +669,8 @@ void CUDT::connect(const sockaddr* serv_addr)
 
       if (CTimer::getTime() > ttl)
       {
+		 // Remove connector from RcvQueue or garbage collecter thread can use after free.
+		 m_pRcvQueue->removeConnector(m_SocketID);
          // timeout
          e = CUDTException(1, 1, 0);
          break;
@@ -698,8 +700,13 @@ int CUDT::connect(const CPacket& response) throw ()
    // returning -1 means there is an error.
    // returning 1 or 2 means the connection is in process and needs more handshake
 
-   if (!m_bConnecting)
-      return -1;
+	if (!m_bConnecting)
+	{
+		// Remove connector from RcvQueue or garbage collecter thread can use after free.
+		m_pRcvQueue->removeConnector(m_SocketID);
+
+		return -1;
+	}
 
    if (m_bRendezvous && ((0 == response.getFlag()) || (1 == response.getType())) && (0 != m_ConnRes.m_iType))
    {
@@ -709,24 +716,34 @@ int CUDT::connect(const CPacket& response) throw ()
    }
 
    if ((1 != response.getFlag()) || (0 != response.getType()))
-      return -1;
+   {
+	   // Remove connector from RcvQueue or garbage collecter thread can use after free.
+	   m_pRcvQueue->removeConnector(m_SocketID);
+
+	   return -1;
+   }
 
    m_ConnRes.deserialize(response.m_pcData, response.getLength());
 
    if (m_bRendezvous)
    {
-      // regular connect should NOT communicate with rendezvous connect
-      // rendezvous connect require 3-way handshake
-      if (1 == m_ConnRes.m_iReqType)
-         return -1;
+	   // regular connect should NOT communicate with rendezvous connect
+	   // rendezvous connect require 3-way handshake
+	   if (1 == m_ConnRes.m_iReqType)
+	   {
+		   // Remove connector from RcvQueue or garbage collecter thread can use after free.
+		   m_pRcvQueue->removeConnector(m_SocketID);
 
-      if ((0 == m_ConnReq.m_iReqType) || (0 == m_ConnRes.m_iReqType))
-      {
-         m_ConnReq.m_iReqType = -1;
-         // the request time must be updated so that the next handshake can be sent out immediately.
-         m_llLastReqTime = 0;
-         return 1;
-      }
+		   return -1;
+	   }
+
+	   if ((0 == m_ConnReq.m_iReqType) || (0 == m_ConnRes.m_iReqType))
+	   {
+		   m_ConnReq.m_iReqType = -1;
+		   // the request time must be updated so that the next handshake can be sent out immediately.
+		   m_llLastReqTime = 0;
+		   return 1;
+	   }
    }
    else
    {
